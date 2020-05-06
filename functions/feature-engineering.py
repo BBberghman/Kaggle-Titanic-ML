@@ -17,38 +17,6 @@ def substrings_in_string(big_string, substrings):
 def unrelatedDataClean(df):
     #setting silly values to nan
     df.Fare = df.Fare.map(lambda x: np.nan if x==0 else x)
-    
-    #Special case for cabins as nan may be signal
-    df.Cabin = df.Cabin.fillna('Unknown')    
-
-    #creating a title column from name
-    title_list=['Mrs', 'Mr', 'Master', 'Miss', 'Major', 'Rev',
-                'Dr', 'Ms', 'Mlle','Col', 'Capt', 'Mme', 'Countess',
-                'Don', 'Jonkheer']
-
-    df['Title']=df['Name'].map(lambda x: substrings_in_string(x, title_list))
-    
-    #replacing all titles with mr, mrs, miss, master
-    def replace_titles(x):
-        title=x['Title']
-        if title in ['Don', 'Major', 'Capt', 'Jonkheer', 'Rev', 'Col']:
-            return 'Mr'
-        elif title in ['Countess', 'Mme']:
-            return 'Mrs'
-        elif title in ['Mlle', 'Ms']:
-            return 'Miss'
-        elif title =='Dr':
-            if x['Sex']=='Male':
-                return 'Mr'
-            else:
-                return 'Mrs'
-        else:
-            return title
-    df['Title']=df.apply(replace_titles, axis=1)
-
-    #Turning cabin number into Deck
-    cabin_list = ['A', 'B', 'C', 'D', 'E', 'F', 'T', 'G', 'Unknown']
-    df['Deck']=df['Cabin'].map(lambda x: substrings_in_string(x, cabin_list))
         
     #Creating new family_size column
     df['Family_Size']=df['SibSp']+df['Parch']
@@ -70,7 +38,6 @@ def relatedDataClean(train, test):
         df.Age=df.Age.fillna(meanAge)
         modeEmbarked = mode(df.Embarked)[0][0]
         df.Embarked = df.Embarked.fillna(modeEmbarked)
-
 
     #Fare per person
     for df in [train, test]:
@@ -99,22 +66,9 @@ def discretise_numeric(train, test, data_type_dict, no_bins=10):
     return train, test, data_type_dict
 
 def clean(no_bins=0):
-    #read data
-    trainpath = '../data/train.csv'
-    testpath = '../data/test.csv'
-    traindf = pd.read_csv(trainpath)
-    testdf = pd.read_csv(testpath)
-
-    #clean
-    traindf = unrelatedDataClean(traindf)
-    testdf = unrelatedDataClean(testdf)
-    traindf, testdf, data_type_dict = relatedDataClean(traindf, testdf)
-    
+   
     traindf, testdf, data_type_dict = discretise_numeric(traindf, testdf, data_type_dict)
     
     #create a submission file for kaggle
     predictiondf = pd.DataFrame(testdf['PassengerId'])
     predictiondf['Survived']=[0 for x in range(len(testdf))]
-    predictiondf.to_csv('../predictions/2-prediction-feature-engineering.csv',
-                  index=False)
-    return [traindf, testdf, data_type_dict]
