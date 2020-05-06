@@ -1,3 +1,5 @@
+import numpy as np
+
 def substrings_in_string(big_string, substrings):
     for substring in substrings:
         if big_string.find(substring) != -1:
