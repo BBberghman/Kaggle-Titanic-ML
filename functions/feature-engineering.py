@@ -8,13 +8,13 @@ import string
 
 def substrings_in_string(big_string, substrings):
     for substring in substrings:
-        if string.find(big_string, substring) != -1:
+        if big_string.find(substring) != -1:
             return substring
-    print big_string
+    print(big_string)
     return np.nan
 
 
-def phase1clean(df):
+def unrelatedDataClean(df):
     #setting silly values to nan
     df.Fare = df.Fare.map(lambda x: np.nan if x==0 else x)
     
@@ -55,16 +55,16 @@ def phase1clean(df):
     
     return df
     
-def phase2clean(train, test):
+def relatedDataClean(train, test):
     #data type dictionary
     data_type_dict={'Pclass':'ordinal', 'Sex':'nominal', 
                     'Age':'numeric', 
                     'Fare':'numeric', 'Embarked':'nominal', 'Title':'nominal',
                     'Deck':'nominal', 'Family_Size':'ordinal'}      
 
-    #imputing nan values
+    #imputing nan values > all that don't have a fare
     for df in [train, test]:
-        classmeans = df.pivot_table('Fare', rows='Pclass', aggfunc='mean')
+        classmeans = pd.pivot_table(df, 'Fare', rows='Pclass', aggfunc='mean')
         df.Fare = df[['Fare', 'Pclass']].apply(lambda x: classmeans[x['Pclass']] if pd.isnull(x['Fare']) else x['Fare'], axis=1 )
         meanAge=np.mean(df.Age)
         df.Age=df.Age.fillna(meanAge)
@@ -72,7 +72,7 @@ def phase2clean(train, test):
         df.Embarked = df.Embarked.fillna(modeEmbarked)
 
 
-#    Fare per person
+    #Fare per person
     for df in [train, test]:
         df['Fare_Per_Person']=df['Fare']/(df['Family_Size']+1)
     
@@ -99,23 +99,22 @@ def discretise_numeric(train, test, data_type_dict, no_bins=10):
     return train, test, data_type_dict
 
 def clean(no_bins=0):
-    #you'll want to tweak this to conform with your computer's file system
-    trainpath = 'C:/Documents and Settings/DIGIT/My Documents/Google Drive/Blogs/triangleinequality/Titanic/rawtrain.csv'
-    testpath = 'C:/Documents and Settings/DIGIT/My Documents/Google Drive/Blogs/triangleinequality/Titanic/rawtest.csv'
+    #read data
+    trainpath = '../data/train.csv'
+    testpath = '../data/test.csv'
     traindf = pd.read_csv(trainpath)
     testdf = pd.read_csv(testpath)
 
-    traindf=phase1clean(traindf)
-    testdf=phase1clean(testdf)
+    #clean
+    traindf = unrelatedDataClean(traindf)
+    testdf = unrelatedDataClean(testdf)
+    traindf, testdf, data_type_dict = relatedDataClean(traindf, testdf)
     
-    traindf, testdf, data_type_dict=phase2clean(traindf, testdf)
-    
-    traindf, testdf, data_type_dict=discretise_numeric(traindf, testdf, data_type_dict)
-
+    traindf, testdf, data_type_dict = discretise_numeric(traindf, testdf, data_type_dict)
     
     #create a submission file for kaggle
     predictiondf = pd.DataFrame(testdf['PassengerId'])
     predictiondf['Survived']=[0 for x in range(len(testdf))]
-    predictiondf.to_csv('C:/Documents and Settings/DIGIT/My Documents/Google Drive/Blogs/triangleinequality/Titanic/prediction.csv',
+    predictiondf.to_csv('../predictions/2-prediction-feature-engineering.csv',
                   index=False)
     return [traindf, testdf, data_type_dict]
